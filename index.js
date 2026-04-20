@@ -7,7 +7,6 @@ const cors = require('cors');
 
 
 const app = express();
-
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
@@ -27,11 +26,24 @@ app.use(express.json());
 
 const coursesRouter = require('./routes/courses.route');
 const usersRouter = require('./routes/users.route');
+const productsRouter=require('./routes/products.route')
+const ordersRouter = require('./routes/orders.route');
+const wishlistRouter = require('./routes/wishlist.route');
+const reviewRouter = require('./routes/reviews.route');
+
+
+
 
 
 app.use('/api/courses', coursesRouter) // /api/courses
 
 app.use('/api/users', usersRouter) // /api/users
+app.use('/api/products', productsRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/api/wishlist', wishlistRouter);
+app.use('/api/reviews', reviewRouter);
+
+
 
 // global middleware for not found router
 app.all('*path', (req, res, next)=> {

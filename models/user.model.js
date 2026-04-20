@@ -15,25 +15,28 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
-        validate: [validator.isEmail , 'filed must be a valid email address']
+        validate: [validator.isEmail, 'field must be a valid email address']
     },
     password: {
         type: String,
         required: true
     },
-    token: {
-        type: String
+    address: {
+        type: String,
+        required: false
+    },
+    phone: {
+        type: String,
+        required: false
     },
     role: {
-        type: String, // ["USER", "ADMIN", "MANGER"]
-        enum: [userRoles.USER, userRoles.ADMIN, userRoles.MANGER],
-        default: userRoles.USER
-    },
-    avatar: {
-        type: String,
-        default: 'uploads/profile.png'
+    type: String,
+    enum: [userRoles.USER, userRoles.ADMIN],
+    default: userRoles.USER
+},
+    token: {
+        type: String
     }
-
-})
+}, { timestamps: true })
 
 module.exports = mongoose.model('User', userSchema);

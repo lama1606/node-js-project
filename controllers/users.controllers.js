@@ -3,95 +3,79 @@ const User = require('../models/user.model');
 const httpStatusText = require('../utils/httpStatus');
 const appError = require('../utils/appError');
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const generateJWT = require("../utils/generateJwt");
 
-const getAllUsers = asyncWrapper(async (req,res) => {
-
+const getAllUsers = asyncWrapper(async (req, res) => {
     const query = req.query;
-
     const limit = query.limit || 10;
     const page = query.page || 1;
     const skip = (page - 1) * limit;
 
-    // get all courses) from DB using Course Model
-    const users = await User.find({}, {"__v": false, 'password': false}).limit(limit).skip(skip);
-
-    res.json({ status: httpStatusText.SUCCESS, data: {users}});
+    const users = await User.find({}, { "__v": false, 'password': false, 'token': false }).limit(limit).skip(skip);
+    res.json({ status: httpStatusText.SUCCESS, data: { users } });
 })
 
-
 const register = asyncWrapper(async (req, res, next) => {
-    const { firstName, lastName, email, password, role } = req.body;
+    const { firstName, lastName, email, password, phone, address, role } = req.body;
 
-    const oldUser = await User.findOne({ email: email});
-
-    if(oldUser) {
-        const error = appError.create('user already exists', 400, httpStatusText.FAIL)
+    // التحقق من البيانات المطلوبة
+    if (!firstName || !lastName || !email || !password) {
+        const error = appError.create('firstName, lastName, email and password are required', 400, httpStatusText.FAIL);
         return next(error);
     }
 
-    // password hashing
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // التحقق من إن اليوزر مش موجود
+    const oldUser = await User.findOne({ email });
+    if (oldUser) {
+        const error = appError.create('user already exists', 400, httpStatusText.FAIL);
+        return next(error);
+    }
 
+    // تشفير الباسورد
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
         firstName,
         lastName,
         email,
         password: hashedPassword,
-        role,
-        avatar: req.file.filename
-    })
+        phone,
+        address,
+        role
+    });
 
-    // generate JWT token 
-    const token = await generateJWT({email: newUser.email, id: newUser._id, role: newUser.role});
+    // توليد الـ token
+    const token = await generateJWT({ email: newUser.email, id: newUser._id, role: newUser.role });
     newUser.token = token;
-
 
     await newUser.save();
 
-
-
-    res.status(201).json({status: httpStatusText.SUCCESS, data: {user: newUser}})
-
-
+    res.status(201).json({ status: httpStatusText.SUCCESS, data: { user: newUser } });
 })
 
-
 const login = asyncWrapper(async (req, res, next) => {
-    const {email, password} = req.body;
+    const { email, password } = req.body;
 
-    if(!email && !password) {
-        const error = appError.create('email and password are required', 400, httpStatusText.FAIL)
+    if (!email || !password) {
+        const error = appError.create('email and password are required', 400, httpStatusText.FAIL);
         return next(error);
     }
 
-    const user = await User.findOne({email: email});
-
-    if(!user) {
-        const error = appError.create('user not found', 400, httpStatusText.FAIL)
+    const user = await User.findOne({ email });
+    if (!user) {
+        const error = appError.create('user not found', 400, httpStatusText.FAIL);
         return next(error);
     }
 
     const matchedPassword = await bcrypt.compare(password, user.password);
 
-    if(user && matchedPassword) {
-        // logged in successfully
-
-       const token = await generateJWT({email: user.email, id: user._id, role: user.role});
-
-        return res.json({ status: httpStatusText.SUCCESS, data: {token}});
+    if (user && matchedPassword) {
+        const token = await generateJWT({ email: user.email, id: user._id, role: user.role });
+        return res.json({ status: httpStatusText.SUCCESS, data: { token } });
     } else {
-        const error = appError.create('something wrong', 500, httpStatusText.ERROR)
+        const error = appError.create('email or password is wrong', 400, httpStatusText.FAIL);
         return next(error);
     }
-
 })
 
-
-module.exports = {
-    getAllUsers,
-    register,
-    login
-}
+module.exports = { getAllUsers, register, login }
