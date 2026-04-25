@@ -39,7 +39,7 @@ const getOrder = asyncWrapper(async (req, res, next) => {
     }
 
     // التأكد إن اليوزر هو صاحب الأوردر أو admin
-    if (order.userId._id.toString() !== req.currentUser.id && req.currentUser.role !== 'admin') {
+    if (order.userId._id.toString() !== req.currentUser.id && req.currentUser.role !== 'ADMIN') {
         const error = appError.create('you are not authorized', 403, httpStatusText.FAIL);
         return next(error);
     }
@@ -85,7 +85,7 @@ const createOrder = asyncWrapper(async (req, res, next) => {
 // UPDATE ORDER STATUS (ADMIN)
 // ========================
 const updateOrderStatus = asyncWrapper(async (req, res, next) => {
-    if (req.currentUser.role !== 'admin') {
+    if (req.currentUser.role !== 'ADMIN') {
         const error = appError.create('you are not authorized', 403, httpStatusText.FAIL);
         return next(error);
     }

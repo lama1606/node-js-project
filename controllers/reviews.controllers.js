@@ -136,7 +136,7 @@ const deleteReview = asyncWrapper(async (req, res, next) => {
         return next(error);
     }
 
-    if (review.buyerId.toString() !== req.currentUser.id && req.currentUser.role !== 'admin') {
+    if (review.buyerId.toString() !== req.currentUser.id && req.currentUser.role !== 'ADMIN') {
         const error = appError.create('you are not authorized to delete this review', 403, httpStatusText.FAIL);
         return next(error);
     }

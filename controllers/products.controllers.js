@@ -127,7 +127,7 @@ const deleteProduct = asyncWrapper(async (req, res, next) => {
         return next(error);
     }
 
-    if (product.userId.toString() !== req.currentUser.id && req.currentUser.role !== 'admin') {
+    if (product.userId.toString() !== req.currentUser.id && req.currentUser.role !== 'ADMIN') {
         const error = appError.create('you are not authorized to delete this product', 403, httpStatusText.FAIL);
         return next(error);
     }
@@ -143,7 +143,7 @@ const deleteProduct = asyncWrapper(async (req, res, next) => {
 // APPROVE PRODUCT (ADMIN)
 // ========================
 const approveProduct = asyncWrapper(async (req, res, next) => {
-    if (req.currentUser.role !== 'admin') {
+    if (req.currentUser.role !== 'ADMIN') {
         const error = appError.create('you are not authorized', 403, httpStatusText.FAIL);
         return next(error);
     }

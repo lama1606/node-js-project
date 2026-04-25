@@ -1,4 +1,5 @@
 const asyncWrapper = require("../middleware/asyncWrapper");
+const mongoose = require("mongoose");
 const Wishlist = require('../models/wishlist.model');
 const Product = require('../models/product.model');
 const ProductImage = require('../models/productImg.model');
@@ -77,10 +78,21 @@ const addToWishlist = asyncWrapper(async (req, res, next) => {
 const removeFromWishlist = asyncWrapper(async (req, res, next) => {
     const { productId } = req.params;
 
+    if (!mongoose.isValidObjectId(productId)) {
+        const error = appError.create('invalid product id', 400, httpStatusText.FAIL);
+        return next(error);
+    }
+
     const wishlist = await Wishlist.findOne({ userId: req.currentUser.id });
 
     if (!wishlist) {
         const error = appError.create('wishlist not found', 404, httpStatusText.FAIL);
+        return next(error);
+    }
+
+    const inList = wishlist.products.some((id) => id.toString() === productId);
+    if (!inList) {
+        const error = appError.create('product not in wishlist', 404, httpStatusText.FAIL);
         return next(error);
     }
 
