@@ -8,7 +8,7 @@ const appError = require('../utils/appError');
 // GET ALL PAYMENTS (ADMIN)
 // ========================
 const getAllPayments = asyncWrapper(async (req, res, next) => {
-    if (req.currentUser.role !== 'admin') {
+    if (req.currentUser.role !== 'ADMIN') {
         const error = appError.create('you are not authorized', 403, httpStatusText.FAIL);
         return next(error);
     }
@@ -93,7 +93,7 @@ const createPayment = asyncWrapper(async (req, res, next) => {
 // UPDATE PAYMENT STATUS (ADMIN)
 // ========================
 const updatePaymentStatus = asyncWrapper(async (req, res, next) => {
-    if (req.currentUser.role !== 'admin') {
+    if (req.currentUser.role !== 'ADMIN') {
         const error = appError.create('you are not authorized', 403, httpStatusText.FAIL);
         return next(error);
     }
