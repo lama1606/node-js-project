@@ -1,53 +1,61 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const productSchema = new mongoose.Schema({
+const productSchema = new mongoose.Schema(
+  {
     userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
     categoryName: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     productName: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
+    },
+    gender: {
+      type: String,
+      enum: ["Male", "Female"],
+      required: true,
     },
     description: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     price: {
-        type: Number,
-        required: true
+      type: Number,
+      required: true,
     },
     condition: {
-        type: String,
-        enum: ['new', 'like new', 'good', 'fair', 'poor'],
-        required: true
+      type: String,
+      enum: ["new", "used"],
+      required: true,
     },
     size: {
-        type: String
+      type: String,
     },
     brand: {
-        type: String
+      type: String,
     },
     material: {
-        type: String
+      type: String,
     },
     color: {
-        type: String
+      type: String,
     },
     isApproved: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false,
     },
     status: {
-        type: String,
-        enum: ['available', 'sold', 'pending'],
-        default: 'available'
-    }
-}, { timestamps: true })
+      type: String,
+      enum: ["available", "sold", "pending"],
+      default: "available",
+    },
+  },
+  { timestamps: true },
+);
 
-module.exports = mongoose.model('Product', productSchema);
+module.exports = mongoose.model("Product", productSchema);

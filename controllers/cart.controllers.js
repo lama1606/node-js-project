@@ -171,4 +171,41 @@ const clearCart = asyncWrapper(async (req, res, next) => {
     res.json({ status: httpStatusText.SUCCESS, data: { cart } });
 });
 
-module.exports = { getMyCart, addToCart, updateCartItem, removeFromCart, clearCart };
+// ========================
+// CHECKOUT
+// ========================
+const checkout = asyncWrapper(async (req, res, next) => {
+    const { address } = req.body;
+
+    if (!address) {
+        const error = appError.create('address is required', 400, httpStatusText.FAIL);
+        return next(error);
+    }
+
+    const cart = await Cart.findOne({ userId: req.currentUser.id });
+
+    if (!cart || cart.products.length === 0) {
+        const error = appError.create('cart is empty', 400, httpStatusText.FAIL);
+        return next(error);
+    }
+
+    const Order = require('../models/order.model');
+
+    const newOrder = new Order({
+        userId: req.currentUser.id,
+        address,
+        products: cart.products,
+        amount: cart.totalAmount
+    });
+
+    await newOrder.save();
+
+    // فضي الـ cart بعد الـ checkout
+    cart.products = [];
+    cart.totalAmount = 0;
+    await cart.save();
+
+    res.status(201).json({ status: httpStatusText.SUCCESS, data: { order: newOrder } });
+});
+
+module.exports = { getMyCart, addToCart, updateCartItem, removeFromCart, clearCart, checkout };

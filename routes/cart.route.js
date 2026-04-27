@@ -8,7 +8,12 @@ router.route('/')
     .post(verifyToken, cartController.addToCart)
     .delete(verifyToken, cartController.clearCart);
 
-router.route('/:productId')
+
+router.route('/checkout')
+    .post(verifyToken, cartController.checkout);
+
+
+    router.route('/:productId')
     .patch(verifyToken, cartController.updateCartItem)
     .delete(verifyToken, cartController.removeFromCart);
 

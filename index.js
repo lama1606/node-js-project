@@ -32,6 +32,8 @@ const wishlistRouter = require('./routes/wishlist.route');
 const reviewRouter = require('./routes/reviews.route');
 const cartRouter = require('./routes/cart.route');
 const categoriesRouter = require('./routes/categories.route');
+const paymentRouter = require('./routes/payments.route');
+
 
 
 
@@ -46,6 +48,7 @@ app.use('/api/wishlist', wishlistRouter);
 app.use('/api/reviews', reviewRouter);
 app.use('/api/carts', cartRouter);
 app.use('/api/categories', categoriesRouter);
+app.use('/api/payments', paymentRouter);
 
 
 
