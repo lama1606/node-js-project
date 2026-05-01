@@ -5,6 +5,27 @@ const Product = require('../models/product.model');
 const httpStatusText = require('../utils/httpStatus');
 const appError = require('../utils/appError');
 
+/** Fixed delivery charge (override with SHIPPING_FEE in .env). */
+const SHIPPING_FEE = (() => {
+    const n = Number(process.env.SHIPPING_FEE);
+    return Number.isFinite(n) && n >= 0 ? n : 70;
+})();
+
+function shippingFeeForCart(cart) {
+    if (!cart || !Array.isArray(cart.products) || cart.products.length === 0) return 0;
+    return SHIPPING_FEE;
+}
+
+/** `totalAmount` on the cart document = subtotal (items only). Adds shippingFee + grandTotal for API. */
+function enrichCartForResponse(cartDoc) {
+    if (!cartDoc) return null;
+    const cart = cartDoc.toObject ? cartDoc.toObject() : { ...cartDoc };
+    const subtotal = cart.totalAmount || 0;
+    const shippingFee = shippingFeeForCart(cart);
+    const grandTotal = subtotal + shippingFee;
+    return { ...cart, subtotal, shippingFee, grandTotal };
+}
+
 const recalculateTotalAmount = async (cart) => {
     let totalAmount = 0;
 
@@ -25,16 +46,26 @@ const recalculateTotalAmount = async (cart) => {
 // ========================
 const getMyCart = asyncWrapper(async (req, res) => {
     const cart = await Cart.findOne({ userId: req.currentUser.id })
-        .populate('products.productId', 'productName price status isApproved');
+        .populate('products.productId', 'description brand price status isApproved');
 
     if (!cart) {
         return res.json({
             status: httpStatusText.SUCCESS,
-            data: { cart: { cartId: null, userId: req.currentUser.id, products: [], totalAmount: 0 } }
+            data: {
+                cart: {
+                    cartId: null,
+                    userId: req.currentUser.id,
+                    products: [],
+                    totalAmount: 0,
+                    subtotal: 0,
+                    shippingFee: 0,
+                    grandTotal: 0
+                }
+            }
         });
     }
 
-    res.json({ status: httpStatusText.SUCCESS, data: { cart } });
+    res.json({ status: httpStatusText.SUCCESS, data: { cart: enrichCartForResponse(cart) } });
 });
 
 // ========================
@@ -82,7 +113,7 @@ const addToCart = asyncWrapper(async (req, res, next) => {
     await recalculateTotalAmount(cart);
     await cart.save();
 
-    res.status(201).json({ status: httpStatusText.SUCCESS, data: { cart } });
+    res.status(201).json({ status: httpStatusText.SUCCESS, data: { cart: enrichCartForResponse(cart) } });
 });
 
 // ========================
@@ -119,7 +150,7 @@ const updateCartItem = asyncWrapper(async (req, res, next) => {
     await recalculateTotalAmount(cart);
     await cart.save();
 
-    res.json({ status: httpStatusText.SUCCESS, data: { cart } });
+    res.json({ status: httpStatusText.SUCCESS, data: { cart: enrichCartForResponse(cart) } });
 });
 
 // ========================
@@ -150,7 +181,7 @@ const removeFromCart = asyncWrapper(async (req, res, next) => {
     await recalculateTotalAmount(cart);
     await cart.save();
 
-    res.json({ status: httpStatusText.SUCCESS, data: { cart } });
+    res.json({ status: httpStatusText.SUCCESS, data: { cart: enrichCartForResponse(cart) } });
 });
 
 // ========================
@@ -168,7 +199,7 @@ const clearCart = asyncWrapper(async (req, res, next) => {
 
     await cart.save();
 
-    res.json({ status: httpStatusText.SUCCESS, data: { cart } });
+    res.json({ status: httpStatusText.SUCCESS, data: { cart: enrichCartForResponse(cart) } });
 });
 
 // ========================
@@ -191,11 +222,15 @@ const checkout = asyncWrapper(async (req, res, next) => {
 
     const Order = require('../models/order.model');
 
+    const subtotal = cart.totalAmount;
+    const shippingFee = shippingFeeForCart(cart);
+    const grandTotal = subtotal + shippingFee;
+
     const newOrder = new Order({
         userId: req.currentUser.id,
         address,
         products: cart.products,
-        amount: cart.totalAmount
+        amount: grandTotal
     });
 
     await newOrder.save();
@@ -205,7 +240,16 @@ const checkout = asyncWrapper(async (req, res, next) => {
     cart.totalAmount = 0;
     await cart.save();
 
-    res.status(201).json({ status: httpStatusText.SUCCESS, data: { order: newOrder } });
+    res.status(201).json({
+        status: httpStatusText.SUCCESS,
+        data: {
+            order: {
+                ...newOrder.toObject(),
+                subtotal,
+                shippingFee
+            }
+        }
+    });
 });
 
 module.exports = { getMyCart, addToCart, updateCartItem, removeFromCart, clearCart, checkout };

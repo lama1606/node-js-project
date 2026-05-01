@@ -3,6 +3,10 @@ const router = express.Router();
 const paymentController = require('../controllers/payment.controllers');
 const verifyToken = require('../middleware/verifyToken');
 
+router
+    .route('/stripe/create-intent')
+    .post(verifyToken, paymentController.createStripePaymentIntent);
+
 router.route('/')
     .get(verifyToken, paymentController.getAllPayments)
     .post(verifyToken, paymentController.createPayment)

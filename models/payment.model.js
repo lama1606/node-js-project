@@ -23,6 +23,11 @@ const paymentSchema = new mongoose.Schema({
     paymentDate: {
         type: Date,
         default: Date.now
+    },
+    /** Set when using Stripe card flow (PaymentIntent). */
+    stripePaymentIntentId: {
+        type: String,
+        default: null
     }
 }, { timestamps: true })
 

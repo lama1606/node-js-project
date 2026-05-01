@@ -10,7 +10,6 @@ const categorySchema = new mongoose.Schema(
         categoryName: {
             type: String,
             required: true,
-            unique: true,
             trim: true
         },
         parentId: {
@@ -21,5 +20,9 @@ const categorySchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
+
+// Same name allowed under different parents (e.g. "T-Shirt" under Men and under Women).
+// Roots (parentId null): use unique pairs so "Men"/"Women" stay single per tier.
+categorySchema.index({ parentId: 1, categoryName: 1 }, { unique: true });
 
 module.exports = mongoose.model('Category', categorySchema);

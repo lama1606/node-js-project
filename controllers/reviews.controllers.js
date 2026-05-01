@@ -12,7 +12,7 @@ const getSellerReviews = asyncWrapper(async (req, res, next) => {
 
     const reviews = await Review.find({ sellerId })
         .populate('buyerId', 'firstName lastName')
-        .populate('productId', 'productName price')
+        .populate('productId', 'description brand price')
         .populate('orderId');
 
     res.json({ status: httpStatusText.SUCCESS, data: { reviews } });
@@ -25,7 +25,7 @@ const getReview = asyncWrapper(async (req, res, next) => {
     const review = await Review.findById(req.params.id)
         .populate('buyerId', 'firstName lastName')
         .populate('sellerId', 'firstName lastName')
-        .populate('productId', 'productName price')
+        .populate('productId', 'description brand price')
         .populate('orderId');
 
     if (!review) {

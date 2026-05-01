@@ -3,6 +3,8 @@ const router = express.Router();
 const multer = require('multer');
 const productsController = require('../controllers/products.controllers');
 const verifyToken = require('../middleware/verifyToken');
+const allowedTo = require('../middleware/allowedTo');
+const userRoles = require('../utils/userRoles');
 const appError = require('../utils/appError');
 
 const diskStorage = multer.diskStorage({
@@ -26,6 +28,17 @@ const fileFilter = (req, file, cb) => {
 }
 
 const upload = multer({ storage: diskStorage, fileFilter });
+
+router.post('/suggest-price', verifyToken, productsController.suggestProductPrice);
+
+router.post(
+    '/admin/apply-price-suggestions',
+    verifyToken,
+    allowedTo(userRoles.ADMIN),
+    productsController.bulkApplyPriceSuggestions
+);
+
+router.post('/:id/apply-price-suggestion', verifyToken, productsController.applyPriceSuggestionToProduct);
 
 router.route('/')
     .get(productsController.getAllProducts)

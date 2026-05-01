@@ -7,12 +7,9 @@ const productSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    categoryName: {
-      type: String,
-      required: true,
-    },
-    productName: {
-      type: String,
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
       required: true,
     },
     gender: {
@@ -35,12 +32,15 @@ const productSchema = new mongoose.Schema(
     },
     size: {
       type: String,
+      required: true,
     },
     brand: {
       type: String,
+      required: true,
     },
     material: {
       type: String,
+      required: true,
     },
     color: {
       type: String,
@@ -53,6 +53,14 @@ const productSchema = new mongoose.Schema(
       type: String,
       enum: ["available", "sold", "pending"],
       default: "available",
+    },
+    priceSuggestion: {
+      minPrice: { type: Number },
+      maxPrice: { type: Number },
+      suggestedPrice: { type: Number },
+      reason: { type: String },
+      currency: { type: String },
+      suggestedAt: { type: Date },
     },
   },
   { timestamps: true },

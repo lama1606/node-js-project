@@ -17,11 +17,34 @@ const httpStatusText = require('./utils/httpStatus');
 
 const url = process.env.MONGO_URL;
 
-mongoose.connect(url).then(() => {
-    console.log('mongodb server started')
+mongoose.connect(url).then(async () => {
+    console.log('mongodb server started');
+    try {
+        const Category = require('./models/category.model');
+        await Category.syncIndexes();
+    } catch (e) {
+        console.warn('Category index sync (fix duplicate subcategories in DB if this fails):', e.message);
+    }
 })
 
-app.use(cors())
+app.use(cors());
+
+// Stripe webhooks need the raw body; must be registered before express.json()
+const paymentController = require('./controllers/payment.controllers');
+app.post(
+    '/api/payments/stripe/webhook',
+    express.raw({ type: 'application/json' }),
+    (req, res) => {
+        paymentController
+            .stripeWebhook(req, res)
+            .catch((err) => {
+                if (!res.headersSent) {
+                    res.status(500).json({ error: err.message });
+                }
+            });
+    }
+);
+
 app.use(express.json());
 
 const coursesRouter = require('./routes/courses.route');
