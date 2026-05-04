@@ -191,10 +191,11 @@ async function resolveProductLeafFromBody(body, next) {
 // ========================
 const getAllProducts = asyncWrapper(async (req, res) => {
     const query = req.query;
-    const limit = query.limit || 10;
-    const page = query.page || 1;
+    const limit = Math.max(1, Number.parseInt(query.limit, 10) || 10);
+    const page = Math.max(1, Number.parseInt(query.page, 10) || 1);
     const skip = (page - 1) * limit;
 
+    // Public catalog: approved listings only (new products are saved with isApproved: true)
     const products = await Product.find({ isApproved: true }, { "__v": false })
         .populate('userId', 'firstName lastName email')
         .populate({
@@ -324,7 +325,8 @@ const addProduct = asyncWrapper(async (req, res, next) => {
         size: sizeResult.value,
         brand: String(brand).trim(),
         material: String(material).trim(),
-        color: color != null && String(color).trim() !== '' ? String(color).trim() : undefined
+        color: color != null && String(color).trim() !== '' ? String(color).trim() : undefined,
+        isApproved: true,
     });
 
     await newProduct.save();
