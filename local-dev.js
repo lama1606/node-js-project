@@ -1,3 +1,4 @@
+/** Local Node server only — Vercel loads `app.js` directly (no listen). */
 require('dotenv').config();
 
 const connectDB = require('./config/database');

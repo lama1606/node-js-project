@@ -59,6 +59,10 @@ app.use('/api/carts', cartRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/payments', paymentRouter);
 
+app.get('/', (req, res) => {
+    res.json({ ok: true, message: 'API is running' });
+});
+
 app.all('*path', (req, res, next) => {
     return res.status(404).json({ status: httpStatusText.ERROR, message: 'this resource is not available' });
 });
