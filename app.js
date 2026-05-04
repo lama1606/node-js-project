@@ -6,6 +6,21 @@ const corsMiddleware = require('./config/cors');
 
 const app = express();
 
+/** Works without Mongo — use this on Vercel to verify the deployment (see Runtime Logs only if this fails). */
+app.get('/health', (req, res) => {
+    res.status(200).json({ ok: true, service: 'api', uptime: process.uptime() });
+});
+
+/** Root response without DB — isolates “function crashed” vs “Mongo misconfigured”. */
+app.get('/', (req, res) => {
+    res.status(200).json({
+        ok: true,
+        message: 'API is running',
+        health: 'GET /health',
+        data: 'Routes under /api/* require MONGO_URL on Vercel',
+    });
+});
+
 app.use(async (req, res, next) => {
     try {
         await connectDB();
@@ -59,12 +74,8 @@ app.use('/api/carts', cartRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/payments', paymentRouter);
 
-app.get('/', (req, res) => {
-    res.json({ ok: true, message: 'API is running' });
-});
-
-app.all('*path', (req, res, next) => {
-    return res.status(404).json({ status: httpStatusText.ERROR, message: 'this resource is not available' });
+app.use((req, res) => {
+    res.status(404).json({ status: httpStatusText.ERROR, message: 'this resource is not available' });
 });
 
 app.use((error, req, res, next) => {
