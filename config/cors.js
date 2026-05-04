@@ -8,6 +8,8 @@ const origins = raw
 const corsOptions = {
     origin: origins.length === 1 ? origins[0] : origins,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
 module.exports = cors(corsOptions);

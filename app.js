@@ -22,6 +22,9 @@ app.get('/', (req, res) => {
     });
 });
 
+// CORS must run before DB connect so OPTIONS preflight always gets Allow-Origin headers.
+app.use(corsMiddleware);
+
 app.use(async (req, res, next) => {
     try {
         await connectDB();
@@ -34,8 +37,6 @@ app.use(async (req, res, next) => {
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const httpStatusText = require('./utils/httpStatus');
-
-app.use(corsMiddleware);
 
 const paymentController = require('./controllers/payment.controllers');
 app.post(
