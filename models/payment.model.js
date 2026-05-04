@@ -20,14 +20,13 @@ const paymentSchema = new mongoose.Schema({
         enum: ['pending', 'completed', 'failed', 'refunded'],
         default: 'pending'
     },
+    transactionId: {
+        type: String,
+        default: null
+    },
     paymentDate: {
         type: Date,
         default: Date.now
-    },
-    /** Set when using Stripe card flow (PaymentIntent). */
-    stripePaymentIntentId: {
-        type: String,
-        default: null
     }
 }, { timestamps: true })
 
