@@ -11,6 +11,9 @@ function normalizeOrigin(o) {
     return o.trim().replace(/\/+$/, '');
 }
 
+/** Always allow production Thriftit so signup works if FRONTEND_URL was not saved on Vercel. Still set FRONTEND_URL for preview URLs (comma-separated). */
+const DEFAULT_FRONTEND_ORIGINS = ['https://thriftit-murex.vercel.app'];
+
 function parseAllowedOrigins() {
     const raw = process.env.FRONTEND_URL || '';
     const fromEnv = raw
@@ -23,7 +26,7 @@ function parseAllowedOrigins() {
         'http://localhost:4000',
         'http://127.0.0.1:4000',
     ];
-    return [...new Set([...fromEnv, ...local])];
+    return [...new Set([...fromEnv, ...DEFAULT_FRONTEND_ORIGINS, ...local])];
 }
 
 function isOriginAllowed(origin, allowedList) {
@@ -37,7 +40,7 @@ function corsMiddleware(req, res, next) {
 
     if (process.env.VERCEL && !process.env.FRONTEND_URL) {
         console.warn(
-            '[cors] FRONTEND_URL is not set on Vercel — browser CORS will fail. Set it to your frontend origin (e.g. https://thriftit-murex.vercel.app).'
+            '[cors] FRONTEND_URL is not set — production Thriftit is still allowed by default. Add FRONTEND_URL (comma-separated) for preview Thriftit URLs or custom domains.'
         );
     }
 
