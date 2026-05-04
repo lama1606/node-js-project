@@ -3,7 +3,7 @@ const Payment = require('../models/payment.model');
 const Order = require('../models/order.model');
 const httpStatusText = require('../utils/httpStatus');
 const appError = require('../utils/appError');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { getStripe } = require('../utils/stripeClient');
 
 // ========================
 // GET ALL PAYMENTS (ADMIN)
@@ -108,6 +108,12 @@ const createStripePayment = asyncWrapper(async (req, res, next) => {
         return next(error);
     }
 
+    const stripe = getStripe();
+    if (!stripe) {
+        const error = appError.create('Stripe is not configured (set STRIPE_SECRET_KEY)', 503, httpStatusText.FAIL);
+        return next(error);
+    }
+
     // عمل Payment Intent على Stripe
     const paymentIntent = await stripe.paymentIntents.create({
     amount: Math.round(order.amount * 100),
@@ -153,6 +159,12 @@ const confirmStripePayment = asyncWrapper(async (req, res, next) => {
 
     if (!transactionId) {
         const error = appError.create('transactionId is required', 400, httpStatusText.FAIL);
+        return next(error);
+    }
+
+    const stripe = getStripe();
+    if (!stripe) {
+        const error = appError.create('Stripe is not configured (set STRIPE_SECRET_KEY)', 503, httpStatusText.FAIL);
         return next(error);
     }
 
@@ -212,4 +224,37 @@ const updatePaymentStatus = asyncWrapper(async (req, res, next) => {
     res.json({ status: httpStatusText.SUCCESS, data: { payment } });
 })
 
-module.exports = { getAllPayments, getPayment, createCashPayment, createStripePayment, confirmStripePayment, updatePaymentStatus }
+/**
+ * Stripe dashboard webhook (raw body). Requires STRIPE_WEBHOOK_SECRET.
+ */
+async function stripeWebhook(req, res) {
+    const stripe = getStripe();
+    if (!stripe) {
+        return res.status(503).json({ error: 'Stripe is not configured' });
+    }
+    const whSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!whSecret) {
+        return res.status(503).json({ error: 'STRIPE_WEBHOOK_SECRET is not set' });
+    }
+    const sig = req.headers['stripe-signature'];
+    let event;
+    try {
+        event = stripe.webhooks.constructEvent(req.body, sig, whSecret);
+    } catch (err) {
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+    if (event.type === 'payment_intent.succeeded' || event.type === 'payment_intent.payment_failed') {
+        // Extend here if you need DB updates from webhooks
+    }
+    res.json({ received: true });
+}
+
+module.exports = {
+    getAllPayments,
+    getPayment,
+    createCashPayment,
+    createStripePayment,
+    confirmStripePayment,
+    updatePaymentStatus,
+    stripeWebhook,
+};
