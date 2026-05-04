@@ -3,8 +3,7 @@ require('dotenv').config()
 const express = require('express');
 const path = require('path');
 
-const cors = require('cors');
-
+const corsMiddleware = require('./config/cors');
 
 const app = express();
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -27,7 +26,7 @@ mongoose.connect(url).then(async () => {
     }
 })
 
-app.use(cors());
+app.use(corsMiddleware);
 
 // Stripe webhooks need the raw body; must be registered before express.json()
 const paymentController = require('./controllers/payment.controllers');
