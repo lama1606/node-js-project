@@ -11,7 +11,8 @@ const ROOT_CATEGORY_NAMES = ['Men', 'Women'];
 // ========================
 const getAllCategories = asyncWrapper(async (req, res) => {
     const categories = await Category.find()
-        .populate('parentId', 'categoryId categoryName');
+        .populate('parentId', 'categoryId categoryName')
+        .lean();
 
     res.json({ status: httpStatusText.SUCCESS, data: { categories } });
 });

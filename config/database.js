@@ -16,10 +16,14 @@ async function connectDB() {
         return cached.conn;
     }
 
+    const isVercel = Boolean(process.env.VERCEL);
+    // Hobby ~10s function cap: fail fast + IPv4 often fixes Atlas hangs from serverless.
     const mongooseOpts = {
-        serverSelectionTimeoutMS: 10000,
-        connectTimeoutMS: 12000,
-        maxPoolSize: 5,
+        serverSelectionTimeoutMS: isVercel ? 4000 : 10000,
+        connectTimeoutMS: isVercel ? 5000 : 12000,
+        socketTimeoutMS: isVercel ? 8000 : 0,
+        maxPoolSize: isVercel ? 2 : 5,
+        ...(isVercel ? { family: 4 } : {}),
     };
 
     if (!cached.promise) {
@@ -39,9 +43,28 @@ async function connectDB() {
     }
 
     try {
+        if (isVercel) {
+            await Promise.race([
+                cached.promise,
+                new Promise((_, rej) =>
+                    setTimeout(
+                        () =>
+                            rej(
+                                new Error(
+                                    'MongoDB connect exceeded Vercel time budget. Check: (1) Atlas cluster is not paused, (2) Network Access 0.0.0.0/0, (3) MONGO_URL_YWAELE on Vercel, (4) correct password in URI.'
+                                )
+                            ),
+                        8500
+                    )
+                ),
+            ]);
+        } else {
+            await cached.promise;
+        }
         cached.conn = await cached.promise;
     } catch (e) {
         cached.promise = null;
+        cached.conn = null;
         throw e;
     }
 
