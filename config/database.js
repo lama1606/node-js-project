@@ -16,14 +16,23 @@ async function connectDB() {
         return cached.conn;
     }
 
+    const mongooseOpts = {
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 12000,
+        maxPoolSize: 5,
+    };
+
     if (!cached.promise) {
-        cached.promise = mongoose.connect(url).then(async (m) => {
+        cached.promise = mongoose.connect(url, mongooseOpts).then(async (m) => {
             console.log('mongodb server started');
-            try {
-                const Category = require('../models/category.model');
-                await Category.syncIndexes();
-            } catch (e) {
-                console.warn('Category index sync (fix duplicate subcategories in DB if this fails):', e.message);
+            // Index sync is slow; skip on Vercel cold starts to avoid 504 timeouts (run locally / migration if needed).
+            if (!process.env.VERCEL) {
+                try {
+                    const Category = require('../models/category.model');
+                    await Category.syncIndexes();
+                } catch (e) {
+                    console.warn('Category index sync:', e.message);
+                }
             }
             return m;
         });
