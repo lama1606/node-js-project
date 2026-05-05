@@ -8,6 +8,11 @@ const getApiRouter = require('./api-bundle');
 
 const app = express();
 
+// CORS (`cors` package) must run before any routes — allowlist includes Thriftit production + preview URLs.
+const corsOptions = corsMiddleware.getCorsPackageOptions();
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 /** Works without Mongo — use this on Vercel to verify the deployment (see Runtime Logs only if this fails). */
 app.get('/health', (req, res) => {
     res.status(200).json({ ok: true, service: 'api', uptime: process.uptime() });
@@ -23,18 +28,6 @@ app.get('/', (req, res) => {
         note: '/api/* uses MONGO_URL_YWAELE (preferred) or MONGO_URL in Vercel.',
     });
 });
-
-app.options('*', cors());
-
-app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    next();
-});
-
-// Extra CORS on actual requests + 404/error handlers (allowlist / credentials when origin matches).
-app.use(corsMiddleware);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

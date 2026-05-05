@@ -7,7 +7,11 @@ function normalizeOrigin(o) {
     return o.trim().replace(/\/+$/, '');
 }
 
-const DEFAULT_FRONTEND_ORIGINS = ['https://thriftit-murex.vercel.app'];
+const DEFAULT_FRONTEND_ORIGINS = [
+    'https://thriftit-murex.vercel.app',
+    // Thriftit Vercel preview deployment
+    'https://thriftit-1dpseqnw1-youssefeldesoukyys-projects.vercel.app',
+];
 
 function parseAllowedOrigins() {
     const raw = process.env.FRONTEND_URL || '';
@@ -66,5 +70,25 @@ function corsMiddleware(req, res, next) {
     next();
 }
 
+/** Options for the `cors` npm package — use before all routes in app.js */
+function getCorsPackageOptions() {
+    const allowedList = parseAllowedOrigins();
+    return {
+        origin(origin, callback) {
+            if (!origin) {
+                return callback(null, true);
+            }
+            if (isOriginAllowed(origin, allowedList)) {
+                return callback(null, true);
+            }
+            return callback(null, false);
+        },
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    };
+}
+
 corsMiddleware.applyCorsHeaders = applyCorsHeaders;
+corsMiddleware.getCorsPackageOptions = getCorsPackageOptions;
 module.exports = corsMiddleware;
