@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const cors = require('cors');
 
 const connectDB = require('./config/database');
 const corsMiddleware = require('./config/cors');
@@ -23,7 +24,16 @@ app.get('/', (req, res) => {
     });
 });
 
-// CORS must run before DB connect so OPTIONS preflight always gets Allow-Origin headers.
+app.options('*', cors());
+
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    next();
+});
+
+// Extra CORS on actual requests + 404/error handlers (allowlist / credentials when origin matches).
 app.use(corsMiddleware);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

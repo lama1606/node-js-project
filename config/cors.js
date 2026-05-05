@@ -63,10 +63,6 @@ function corsMiddleware(req, res, next) {
     }
 
     applyCorsHeaders(req, res);
-
-    if (req.method === 'OPTIONS') {
-        return res.status(204).end();
-    }
     next();
 }
 
