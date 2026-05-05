@@ -6,18 +6,60 @@ if (!cached) {
     cached = global.mongoose = { conn: null, promise: null };
 }
 
+/** Race `promise` against a wall-clock timeout so callers get a rejection instead of hanging. */
+function withTimeout(promise, ms, timeoutMessage) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            reject(new Error(timeoutMessage));
+        }, ms);
+
+        promise
+            .then((value) => {
+                clearTimeout(timer);
+                resolve(value);
+            })
+            .catch((err) => {
+                clearTimeout(timer);
+                reject(err);
+            });
+    });
+}
+
+async function resetMongooseState(abandonedPromise) {
+    if (abandonedPromise && typeof abandonedPromise.then === 'function') {
+        abandonedPromise.catch(() => {});
+    }
+    cached.promise = null;
+    cached.conn = null;
+    try {
+        if (mongoose.connection.readyState !== 0) {
+            await mongoose.disconnect();
+        }
+    } catch (_) {
+        // best-effort after failed or timed-out connect
+    }
+}
+
 async function connectDB() {
     const url = process.env.MONGO_URL_YWAELE || process.env.MONGO_URL;
     if (!url) {
         throw new Error('MONGO_URL_YWAELE or MONGO_URL is not defined');
     }
 
-    if (cached.conn) {
+    if (cached.conn && mongoose.connection.readyState === 1) {
         return cached.conn;
     }
 
     const isVercel = Boolean(process.env.VERCEL);
-    // Hobby ~10s function cap: fail fast + IPv4 often fixes Atlas hangs from serverless.
+
+    const defaultOverallMs = isVercel ? 8500 : 20000;
+    const overallMs = Number(process.env.MONGO_CONNECT_TIMEOUT_MS) || defaultOverallMs;
+
+    const timeoutMessage = isVercel
+        ? `MongoDB connect exceeded ${overallMs}ms (Vercel budget). Check: (1) Atlas cluster running, (2) Network Access 0.0.0.0/0, (3) MONGO_URL_YWAELE set in Vercel, (4) password in URI, (5) function region near Atlas (e.g. iad1 for us-east-1).`
+        : `MongoDB connect exceeded ${overallMs}ms. Check Atlas URI, network access, and that the cluster is reachable. Override with MONGO_CONNECT_TIMEOUT_MS.`;
+
+    // Hobby/serverless caps: fail fast + IPv4 often fixes Atlas hangs from serverless.
     const mongooseOpts = {
         serverSelectionTimeoutMS: isVercel ? 4000 : 10000,
         connectTimeoutMS: isVercel ? 5000 : 12000,
@@ -29,7 +71,6 @@ async function connectDB() {
     if (!cached.promise) {
         cached.promise = mongoose.connect(url, mongooseOpts).then(async (m) => {
             console.log('mongodb server started');
-            // Index sync is slow; skip on Vercel cold starts to avoid 504 timeouts (run locally / migration if needed).
             if (!process.env.VERCEL) {
                 try {
                     const Category = require('../models/category.model');
@@ -42,33 +83,20 @@ async function connectDB() {
         });
     }
 
+    const pending = cached.promise;
     try {
-        if (isVercel) {
-            await Promise.race([
-                cached.promise,
-                new Promise((_, rej) =>
-                    setTimeout(
-                        () =>
-                            rej(
-                                new Error(
-                                    'MongoDB connect exceeded Vercel time budget. Check: (1) Atlas cluster is not paused, (2) Network Access 0.0.0.0/0, (3) MONGO_URL_YWAELE on Vercel, (4) correct password in URI.'
-                                )
-                            ),
-                        8500
-                    )
-                ),
-            ]);
-        } else {
-            await cached.promise;
+        await withTimeout(pending, overallMs, timeoutMessage);
+        const ready = mongoose.connection.readyState === 1;
+        if (!ready) {
+            await resetMongooseState(pending);
+            throw new Error('MongoDB connection did not become ready after connect promise resolved.');
         }
-        cached.conn = await cached.promise;
+        cached.conn = mongoose.connection;
+        return cached.conn;
     } catch (e) {
-        cached.promise = null;
-        cached.conn = null;
+        await resetMongooseState(pending);
         throw e;
     }
-
-    return cached.conn;
 }
 
 module.exports = connectDB;
