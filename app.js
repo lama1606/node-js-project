@@ -17,8 +17,8 @@ app.get('/', (req, res) => {
         ok: true,
         message: 'API is running',
         health: 'GET /health',
-        mongoConfigured: Boolean(process.env.MONGO_URL),
-        note: '/api/* routes connect to MongoDB; set MONGO_URL in Vercel if calls fail.',
+        mongoConfigured: Boolean(process.env.MONGO_URL_YWAELE || process.env.MONGO_URL),
+        note: '/api/* uses MONGO_URL_YWAELE (preferred) or MONGO_URL in Vercel.',
     });
 });
 

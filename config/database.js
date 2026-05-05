@@ -7,9 +7,9 @@ if (!cached) {
 }
 
 async function connectDB() {
-    const url = process.env.MONGO_URL;
+    const url = process.env.MONGO_URL_YWAELE || process.env.MONGO_URL;
     if (!url) {
-        throw new Error('MONGO_URL is not defined');
+        throw new Error('MONGO_URL_YWAELE or MONGO_URL is not defined');
     }
 
     if (cached.conn) {
