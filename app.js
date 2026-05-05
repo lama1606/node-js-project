@@ -62,10 +62,12 @@ app.use('/api', async (req, res, next) => {
 });
 
 app.use((req, res) => {
+    corsMiddleware.applyCorsHeaders(req, res);
     res.status(404).json({ status: httpStatusText.ERROR, message: 'this resource is not available' });
 });
 
 app.use((error, req, res, next) => {
+    corsMiddleware.applyCorsHeaders(req, res);
     res.status(error.statusCode || 500).json({
         status: error.statusText || httpStatusText.ERROR,
         message: error.message,

@@ -1,17 +1,12 @@
 /**
- * Explicit CORS for browsers. The `cors` package often omits Access-Control-Allow-Origin
- * when the origin is not in the list—browsers then report "no header" on preflight.
- *
- * Set FRONTEND_URL on Vercel to your Thriftit origin, e.g.:
- *   https://thriftit-murex.vercel.app
- * Comma-separate multiple origins. No trailing slash.
+ * Explicit CORS for browsers.
+ * FRONTEND_URL: comma-separated origins. Also allows any https://thriftit*.vercel.app for Vercel-only workflow.
  */
 function normalizeOrigin(o) {
     if (!o || typeof o !== 'string') return '';
     return o.trim().replace(/\/+$/, '');
 }
 
-/** Always allow production Thriftit so signup works if FRONTEND_URL was not saved on Vercel. Still set FRONTEND_URL for preview URLs (comma-separated). */
 const DEFAULT_FRONTEND_ORIGINS = ['https://thriftit-murex.vercel.app'];
 
 function parseAllowedOrigins() {
@@ -29,20 +24,21 @@ function parseAllowedOrigins() {
     return [...new Set([...fromEnv, ...DEFAULT_FRONTEND_ORIGINS, ...local])];
 }
 
-function isOriginAllowed(origin, allowedList) {
-    if (!origin) return false;
-    return allowedList.includes(normalizeOrigin(origin));
+function isThriftitVercelOrigin(n) {
+    return /^https:\/\/thriftit.*\.vercel\.app$/i.test(n);
 }
 
-function corsMiddleware(req, res, next) {
+function isOriginAllowed(origin, allowedList) {
+    if (!origin) return false;
+    const n = normalizeOrigin(origin);
+    if (allowedList.includes(n)) return true;
+    if (isThriftitVercelOrigin(n)) return true;
+    return false;
+}
+
+function applyCorsHeaders(req, res) {
     const allowed = parseAllowedOrigins();
     const origin = req.headers.origin;
-
-    if (process.env.VERCEL && !process.env.FRONTEND_URL) {
-        console.warn(
-            '[cors] FRONTEND_URL is not set — production Thriftit is still allowed by default. Add FRONTEND_URL (comma-separated) for preview Thriftit URLs or custom domains.'
-        );
-    }
 
     if (origin && isOriginAllowed(origin, allowed)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
@@ -57,6 +53,16 @@ function corsMiddleware(req, res, next) {
         );
         res.setHeader('Vary', 'Origin');
     }
+}
+
+function corsMiddleware(req, res, next) {
+    if (process.env.VERCEL && !process.env.FRONTEND_URL) {
+        console.warn(
+            '[cors] FRONTEND_URL is not set — Thriftit *.vercel.app hosts are still allowed by pattern.'
+        );
+    }
+
+    applyCorsHeaders(req, res);
 
     if (req.method === 'OPTIONS') {
         return res.status(204).end();
@@ -64,4 +70,5 @@ function corsMiddleware(req, res, next) {
     next();
 }
 
+corsMiddleware.applyCorsHeaders = applyCorsHeaders;
 module.exports = corsMiddleware;
