@@ -10,11 +10,18 @@ const app = express();
 
 // (1) Earliest possible: allowlisted CORS headers before any other logic (DB, JSON, routes).
 // (2) `cors` handles preflight and aligns with the same allowlist via getCorsPackageOptions.
-app.use((req, res, next) => {
-    corsMiddleware.applyCorsHeaders(req, res);
-    next();
-});
-const corsOptions = corsMiddleware.getCorsPackageOptions();
+// app.use((req, res, next) => {
+//     corsMiddleware.applyCorsHeaders(req, res);
+//     next();
+// });
+
+const corsOptions = {
+  origin: 'https://thriftit-murex.vercel.app',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  //credentials: true,
+};
+//const corsOptions = corsMiddleware.getCorsPackageOptions();
+
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
@@ -48,7 +55,7 @@ app.post(
             await paymentController.stripeWebhook(req, res);
         } catch (err) {
             if (!res.headersSent) {
-                corsMiddleware.applyCorsHeaders(req, res);
+               // corsMiddleware.applyCorsHeaders(req, res);
                 res.status(500).json({ error: err.message });
             }
         }
@@ -71,12 +78,12 @@ app.use('/api', async (req, res, next) => {
 });
 
 app.use((req, res) => {
-    corsMiddleware.applyCorsHeaders(req, res);
+  //  corsMiddleware.applyCorsHeaders(req, res);
     res.status(404).json({ status: httpStatusText.ERROR, message: 'this resource is not available' });
 });
 
 app.use((error, req, res, next) => {
-    corsMiddleware.applyCorsHeaders(req, res);
+    // corsMiddleware.applyCorsHeaders(req, res);
     res.status(error.statusCode || 500).json({
         status: error.statusText || httpStatusText.ERROR,
         message: error.message,
