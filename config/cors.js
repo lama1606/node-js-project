@@ -13,6 +13,11 @@ const DEFAULT_FRONTEND_ORIGINS = [
     'https://thriftit-1dpseqnw1-youssefeldesoukyys-projects.vercel.app',
 ];
 
+/** Lets `fetch` from opened HTML via file:///... (browser sends Origin: null). Never enable on public production without understanding the risk. */
+function allowLocalFileOpening() {
+    return process.env.ALLOW_FILE_ORIGIN_CORS === 'true';
+}
+
 function parseAllowedOrigins() {
     const raw = process.env.FRONTEND_URL || '';
     const fromEnv = raw
@@ -22,6 +27,8 @@ function parseAllowedOrigins() {
     const local = [
         'http://localhost:5173',
         'http://127.0.0.1:5173',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
         'http://localhost:4000',
         'http://127.0.0.1:4000',
     ];
@@ -35,6 +42,7 @@ function isThriftitVercelOrigin(n) {
 function isOriginAllowed(origin, allowedList) {
     if (!origin) return false;
     const n = normalizeOrigin(origin);
+    if (n === 'null' && allowLocalFileOpening()) return true;
     if (allowedList.includes(n)) return true;
     if (isThriftitVercelOrigin(n)) return true;
     return false;
