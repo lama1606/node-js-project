@@ -8,13 +8,9 @@ const getApiRouter = require('./api-bundle');
 
 const app = express();
 
-// (1) Earliest possible: allowlisted CORS headers before any other logic (DB, JSON, routes).
-// (2) `cors` handles preflight and aligns with the same allowlist via getCorsPackageOptions.
-app.use((req, res, next) => {
-    corsMiddleware.applyCorsHeaders(req, res);
-    next();
-});
+// Same allowlist as config/cors.js: FRONTEND_URL, thriftit-murex, any https://thriftit*.vercel.app, localhost.
 const corsOptions = corsMiddleware.getCorsPackageOptions();
+
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
@@ -48,7 +44,7 @@ app.post(
             await paymentController.stripeWebhook(req, res);
         } catch (err) {
             if (!res.headersSent) {
-                corsMiddleware.applyCorsHeaders(req, res);
+               // corsMiddleware.applyCorsHeaders(req, res);
                 res.status(500).json({ error: err.message });
             }
         }
@@ -56,15 +52,28 @@ app.post(
 );
 
 // Lazy routes: parse controllers only after Mongo connects (smaller Vercel cold start).
+// app.use('/api', async (req, res, next) => {
+//     try {
+//         await connectDB();
+//         getApiRouter()(req, res, (err) => {
+//             if (err) {
+//                 return next(err);
+//             }
+//             next();
+//         });
+//     } catch (e) {
+//         next(e);
+//     }
+// });
 app.use('/api', async (req, res, next) => {
+    if (req.method === 'OPTIONS') {
+        corsMiddleware.applyCorsHeaders(req, res);
+        return res.sendStatus(204);
+    }
+
     try {
         await connectDB();
-        getApiRouter()(req, res, (err) => {
-            if (err) {
-                return next(err);
-            }
-            next();
-        });
+        return getApiRouter()(req, res, next);
     } catch (e) {
         next(e);
     }
