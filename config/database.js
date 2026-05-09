@@ -40,6 +40,15 @@ async function resetMongooseState(abandonedPromise) {
     }
 }
 
+/** Host part of the URI for logs only (no user/password). */
+function mongoTargetForLog(url) {
+    if (!url || typeof url !== 'string') return '(missing)';
+    const match =
+        url.match(/mongodb\+srv:\/\/(?:[^@]*@)?([^/?]+)/) ||
+        url.match(/mongodb:\/\/(?:[^@]*@)?([^/?]+)/);
+    return match ? match[1] : '(unparsed uri)';
+}
+
 async function connectDB() {
     const url = process.env.MONGO_URL_YWAELE || process.env.MONGO_URL;
     if (!url) {
@@ -49,6 +58,8 @@ async function connectDB() {
     if (cached.conn && mongoose.connection.readyState === 1) {
         return cached.conn;
     }
+
+    const mongoLabel = mongoTargetForLog(url);
 
     const isVercel = Boolean(process.env.VERCEL);
 
@@ -69,8 +80,16 @@ async function connectDB() {
     };
 
     if (!cached.promise) {
+        console.log('[mongo] connecting —', mongoLabel);
         cached.promise = mongoose.connect(url, mongooseOpts).then(async (m) => {
-            console.log('mongodb server started');
+            const c = mongoose.connection;
+            console.log(
+                '[mongo] connected OK —',
+                `host=${c.host}`,
+                `db=${c.name}`,
+                `readyState=${c.readyState}`,
+                process.env.VERCEL ? '(vercel)' : '(local)'
+            );
             if (!process.env.VERCEL) {
                 try {
                     const Category = require('../models/category.model');
@@ -94,6 +113,7 @@ async function connectDB() {
         cached.conn = mongoose.connection;
         return cached.conn;
     } catch (e) {
+        console.error('[mongo] connection failed —', mongoLabel, '—', e.message);
         await resetMongooseState(pending);
         throw e;
     }
