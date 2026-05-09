@@ -63,15 +63,27 @@ app.post(
 );
 
 // Lazy routes: parse controllers only after Mongo connects (smaller Vercel cold start).
+// app.use('/api', async (req, res, next) => {
+//     try {
+//         await connectDB();
+//         getApiRouter()(req, res, (err) => {
+//             if (err) {
+//                 return next(err);
+//             }
+//             next();
+//         });
+//     } catch (e) {
+//         next(e);
+//     }
+// });
 app.use('/api', async (req, res, next) => {
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+    }
+
     try {
         await connectDB();
-        getApiRouter()(req, res, (err) => {
-            if (err) {
-                return next(err);
-            }
-            next();
-        });
+        return getApiRouter()(req, res, next);
     } catch (e) {
         next(e);
     }
